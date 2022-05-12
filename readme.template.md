@@ -39,7 +39,7 @@
   <h3 align="center">inity</h3>
 
   <p align="center">
-    A word case management library with too many features (just in case).
+    A small, easy __init__ generator.
   </p>
 </p>
 
@@ -95,6 +95,34 @@ Inity does not generate repr, or comparison methods like other similiar librarie
 
 ```python
 {{basic}}
+```
+
+### VS Dataclasses
+It's fairly anoying to combine dataclasses with the property decorator as seen (here)[https://florimond.dev/en/posts/2018/10/reconciling-dataclasses-and-properties-in-python/]
+
+Inity takes an easy approach to this. If any field of your class shares a name with a property, the intial value will be stored in a _field_name field.
+
+Example:
+```python
+{{vs_dataclass_1}}
+```
+
+
+Dataclasses also makes inheriting from classes with defaults painful as seen (here)[https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses]
+
+Inity simply re-orders parameters so that the defaults are at the end of the set.
+
+Example:
+```python
+{{vs_dataclass_2}}
+```
+
+### Other features
+Inity will handle any callable ending in "_factory" that is set as a default. You can use the convenince function "factory" to update callables to meet his requirement.
+
+Example:
+```python
+{{defaults}}
 ```
 
 <!-- CONTRIBUTING -->

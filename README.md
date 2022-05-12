@@ -39,7 +39,7 @@
   <h3 align="center">inity</h3>
 
   <p align="center">
-    A word case management library with too many features (just in case).
+    A small, easy __init__ generator.
   </p>
 </p>
 
@@ -106,6 +106,98 @@ print(ec.a == 1)
 # True
 print(ec.b == 2)
 # True
+
+```
+
+### VS Dataclasses
+It's fairly anoying to combine dataclasses with the property decorator as seen (here)[https://florimond.dev/en/posts/2018/10/reconciling-dataclasses-and-properties-in-python/]
+
+Inity takes an easy approach to this. If any field of your class shares a name with a property, the intial value will be stored in a _field_name field.
+
+Example:
+```python
+from inity import inity
+
+@inity
+class MyClass:
+    name: str
+    reversed: int = None
+
+    @property
+    def reversed(self):
+        if self._reversed is None:
+            print("generating reversed name")
+            self._reversed = self.name[::-1]
+        return self._reversed
+
+ 
+instance = MyClass(name="inity")
+print(instance.reversed)
+# generating reversed name
+# ytini
+
+instance2 = MyClass(name="inity", reversed="I'm bad at reversing things")
+print(instance2.reversed)
+# I'm bad at reversing things
+```
+
+
+Dataclasses also makes inheriting from classes with defaults painful as seen (here)[https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses]
+
+Inity simply re-orders parameters so that the defaults are at the end of the set.
+
+Example:
+```python
+from inity import inity
+
+@inity
+class FirstClass:
+    has_default: int = 1
+
+@inity
+class SecondClass(FirstClass):
+    no_default: str
+    
+instance = SecondClass("hi")
+
+print(instance.has_default)
+# 1
+print(instance.no_default)
+# hi
+
+```
+
+### Other features
+Inity will handle any callable ending in "_factory" that is set as a default. You can use the convenince function "factory" to update callables to meet his requirement.
+
+Example:
+```python
+from inity import factory, inity
+
+def some_factory():
+    return 314
+
+df = factory(dict)
+
+@inity
+class FactoryLane:
+    a: int = some_factory
+    b: dict = df
+    c: str = factory(lambda: "hi")
+    d: int = factory(int)
+    not_a_factory = str
+
+fl = FactoryLane()
+print(fl.a)
+# 314
+print(fl.b)
+# {}
+print(fl.c)
+# hi
+print(fl.d)
+# 0
+print(fl.not_a_factory)
+# <class 'str'>
 
 ```
 

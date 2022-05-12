@@ -2,7 +2,7 @@ import typing as t
 from dataclasses import field
 from unittest import TestCase, main
 
-from inity import Field, InitVar, factory, inity
+from inity import Field, InitVar, factory, inity, as_dict
 from inity.core import Initializer
 
 
@@ -135,6 +135,15 @@ class TestInity(TestCase):
         self.assertEqual(vc.thing, "butterfly")
         self.assertEqual(vc.after_init, "hi")
         self.assertIsInstance(vc.fields[0], CustomField)
+
+    def test_as_dict(self):
+        @inity
+        class BeADict:
+            a: int = 1
+            b: int = 2
+            c: str = "hi"
+
+        self.assertEqual(as_dict(BeADict()), {"a": 1, "b": 2, "c": "hi"})
 
 
 if __name__ == "__main__":

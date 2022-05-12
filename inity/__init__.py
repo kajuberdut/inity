@@ -1,2 +1,2 @@
 from inity.__version__ import __version__
-from inity.core import Field, Initializer, InitVar, factory, inity
+from inity.core import Field, Initializer, InitVar, factory, inity, as_dict
