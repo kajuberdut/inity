@@ -54,6 +54,7 @@ class Field:
     field_type: FieldType
 
     factory_substring: t.ClassVar[str] = "_factory"
+    property_shadow_prefix: t.ClassVar[str] = "_"
 
     def __init__(
         self,
@@ -122,7 +123,11 @@ class Field:
     def body_setter(self):
         if self.field_type.value >= 3:
             return ""
-        prefix = "_" if self.field_type == FieldType.PROPERTY_SHADOW else ""
+        prefix = (
+            self.property_shadow_prefix
+            if self.field_type == FieldType.PROPERTY_SHADOW
+            else ""
+        )
         name = self.name
         return f"\n\tself.{prefix}{name} = {name}"
 
@@ -137,9 +142,10 @@ class Initializer:
         """
     )
 
-    def __init__(self, cls, field_class=Field):
+    def __init__(self, cls, field_class=Field, debug=False):
         self.cls = proxy(cls)
         self.field_class = field_class
+        self.debug = debug
 
     @cached_property
     def fields(self):
@@ -185,6 +191,8 @@ class Initializer:
         return body
 
     def exec_code(self, code):
+        if self.debug is True:
+            print(code)
         try:
             globals = sys.modules[self.cls.__module__].__dict__
             exec(code, globals, d := {})
@@ -200,13 +208,13 @@ class Initializer:
         )
 
 
-def inity(*args, field_class=Field, initializer_class=Initializer):
+def inity(*args, field_class=Field, initializer_class=Initializer, debug=False):
     if len(args) == 1 and callable(args[0]):
         return inity()(args[0])
 
     def init_builder(cls):
         if "__init__" not in vars(cls):
-            initializer = initializer_class(cls, field_class=field_class)
+            initializer = initializer_class(cls, field_class=field_class, debug=debug)
             cls.__init__ = initializer.build_init()
             cls.fields = initializer.fields
         return cls

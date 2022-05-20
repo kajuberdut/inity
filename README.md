@@ -110,7 +110,7 @@ print(ec.b == 2)
 ```
 
 ### VS Dataclasses
-It's fairly anoying to combine dataclasses with the property decorator as seen (here)[https://florimond.dev/en/posts/2018/10/reconciling-dataclasses-and-properties-in-python/]
+It's fairly anoying to [combine dataclasses with the property decorator](https://florimond.dev/en/posts/2018/10/reconciling-dataclasses-and-properties-in-python/).
 
 Inity takes an easy approach to this. If any field of your class shares a name with a property, the intial value will be stored in a _field_name field.
 
@@ -142,7 +142,7 @@ print(instance2.reversed)
 ```
 
 
-Dataclasses also makes inheriting from classes with defaults painful as seen (here)[https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses]
+Dataclasses also makes inheriting from classes with defaults painful as seen [here](https://stackoverflow.com/questions/51575931/class-inheritance-in-python-3-7-dataclasses)
 
 Inity simply re-orders parameters so that the defaults are at the end of the set.
 

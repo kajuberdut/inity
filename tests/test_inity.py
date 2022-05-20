@@ -117,6 +117,7 @@ class TestInity(TestCase):
     def test_custom_class(self):
         class CustomField(Field):
             factory_substring = "__x__"
+            property_shadow_prefix = "prop_"
 
         class CustomInit(Initializer):
             after_init_hook_name = "bob"
@@ -124,17 +125,23 @@ class TestInity(TestCase):
         def cacoon__x__():
             return "butterfly"
 
-        @inity(field_class=CustomField, initializer_class=CustomInit)
+        @inity(field_class=CustomField, initializer_class=CustomInit, debug=True)
         class VeryCustom:
             thing: int = cacoon__x__
+            shadow: int
 
             def bob(self):
                 self.after_init = "hi"
+                
+            @property
+            def shadow(self):
+                return self.prop_shadow
 
-        vc = VeryCustom()
+        vc = VeryCustom(shadow = 1)
         self.assertEqual(vc.thing, "butterfly")
         self.assertEqual(vc.after_init, "hi")
         self.assertIsInstance(vc.fields[0], CustomField)
+        self.assertEqual(vc.shadow, 1)
 
     def test_as_dict(self):
         @inity
