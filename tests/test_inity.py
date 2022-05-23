@@ -1,5 +1,4 @@
 import typing as t
-from dataclasses import field
 from unittest import TestCase, main
 
 from inity import Field, InitVar, factory, inity, as_dict
@@ -35,44 +34,24 @@ class TestInity(TestCase):
         def some_factory():
             return 314
 
-        df = factory(dict)
-
         @inity
         class FactoryLane:
             a: int = some_factory
-            b: dict = df
             c: str = factory(lambda: "hi")
-            d: int = factory(int)
 
         fl = FactoryLane()
         self.assertEqual(fl.a, 314)
-        self.assertEqual(fl.b, {})
         self.assertEqual(fl.c, "hi")
-        self.assertEqual(fl.d, 0)
-
-    def test_dataclass_field(self):
-        @inity
-        class Something:
-            has_default: int = field(default=1, metadata={"hello": "world"})
-            also_has_default: dict = field(default_factory=dict)
-
-        s = Something()
-        self.assertEqual(s.has_default, 1)
-        df = next((f for f in s.fields if f.name == "has_default"))
-        self.assertEqual(df.metadata["hello"], "world")
-        self.assertEqual(s.also_has_default, {})
 
     def test_inity_field(self):
         @inity
         class SomethingElse:
             has_default: int = Field(default=1, metadata={"hello": "world"})
-            also_has_default: dict = Field(default=factory(dict))
 
         se = SomethingElse()
         self.assertEqual(se.has_default, 1)
         df = next((f for f in se.fields if f.name == "has_default"))
         self.assertEqual(df.metadata["hello"], "world")
-        self.assertEqual(se.also_has_default, {})
 
     def test_class_var(self):
         @inity
@@ -125,19 +104,19 @@ class TestInity(TestCase):
         def cacoon__x__():
             return "butterfly"
 
-        @inity(field_class=CustomField, initializer_class=CustomInit, debug=True)
+        @inity(field_class=CustomField, initializer_class=CustomInit)
         class VeryCustom:
             thing: int = cacoon__x__
             shadow: int
 
             def bob(self):
                 self.after_init = "hi"
-                
+
             @property
             def shadow(self):
                 return self.prop_shadow
 
-        vc = VeryCustom(shadow = 1)
+        vc = VeryCustom(shadow=1)
         self.assertEqual(vc.thing, "butterfly")
         self.assertEqual(vc.after_init, "hi")
         self.assertIsInstance(vc.fields[0], CustomField)

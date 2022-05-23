@@ -1,15 +1,24 @@
+# This version has been modified to work with 3.6 and above
+# Dataclass related features are removed
+# The convenience function "factory" is very limited. 
+# Recommend making wrapper functions name {something}_factory instead
+
 import re
 import sys
 import typing as t
-from dataclasses import MISSING
-from dataclasses import Field as _Field
 from enum import Enum
-from functools import cached_property, singledispatchmethod
 from textwrap import dedent
 from weakref import proxy
 
 SNAKE_1 = re.compile(r"([A-Z]+)([A-Z][a-z])")
 SNAKE_2 = re.compile(r"([a-z\d])([A-Z])")
+
+
+class _MISSING_TYPE(str):
+    pass
+
+
+MISSING = _MISSING_TYPE("MISSING")
 
 
 def upper_snake(string: str) -> str:
@@ -20,6 +29,11 @@ def upper_snake(string: str) -> str:
 
 
 def _is_class_var(param_type) -> bool:
+    if "ClassVar" in str(type(param_type)):
+        # This is a hackey workaround for early
+        # versions of typing not providing
+        # __origin__
+        return True
     if hasattr(param_type, "__origin__"):
         param_type = param_type.__origin__
     if param_type is t.ClassVar:
@@ -35,6 +49,11 @@ def factory(callable: t.Callable) -> t.Callable:
     except TypeError as e:
         if "of immutable type " in str(e):
             return factory(lambda: callable())
+        else:
+            raise TypeError(
+                "Cannot make built-ins a factory in older versions of python."
+                "\nMake a custom factory function instead."
+            )
     return _factory
 
 
@@ -68,9 +87,8 @@ class Field:
         self.param_type = param_type
         self.metadata = {} if metadata is None else metadata
 
-        if name != MISSING and isinstance(
-            default := getattr(mro, name, default), (Field, _Field)
-        ):
+        default = getattr(mro, name, default)
+        if name != MISSING and isinstance(default, Field):
             self.metadata.update(default.metadata)
             default = (
                 default.default
@@ -83,12 +101,12 @@ class Field:
 
         self.default = default
 
-    @cached_property
+    @property
     def field_type(self):
         if isinstance(self.default, property):
             return FieldType.PROPERTY_SHADOW
-        elif ft := FieldType.__members__.get(upper_snake(self.type_name)):
-            return ft
+        elif FieldType.__members__.get(upper_snake(self.type_name)):
+            return FieldType.__members__.get(upper_snake(self.type_name))
         else:
             return FieldType.STANDARD
 
@@ -98,26 +116,25 @@ class Field:
 
     @property
     def type_name(self):
+        if _is_class_var(self.param_type):
+            # Old versions of python do not have the __name__ attribute
+            # on the types in typing.
+            return "CLASS_VAR"
         return self.param_type.__name__
 
     @property
     def param(self):
         return f"{self.name}" + self.default_string(self.default)
 
-    @singledispatchmethod
     def default_string(self, default: t.Any) -> str:
+        if isinstance(default, str):
+            return f' = """{default}"""'
+        elif isinstance(default, property):
+            return " = None"
         if self.has_default:
             return f" = {getattr(default, '__name__', default)}"
         else:
             return ""
-
-    @default_string.register
-    def _(self, default: str) -> str:
-        return f' = """{default}"""'
-
-    @default_string.register
-    def _(self, default: property) -> str:
-        return " = None"
 
     @property
     def body_setter(self):
@@ -146,34 +163,39 @@ class Initializer:
         self.cls = proxy(cls)
         self.field_class = field_class
         self.debug = debug
+        self._fields = None
 
-    @cached_property
+    @property
     def fields(self):
-        return list(
-            {
-                name: self.field_class(name=name, param_type=param_type, mro=mro)
-                for mro in self.cls.__mro__
-                for name, param_type in getattr(mro, "__annotations__", {}).items()
-            }.values()
-        )
+        if self._fields is None:
+            self._fields = list(
+                {
+                    name: self.field_class(name=name, param_type=param_type, mro=mro)
+                    for mro in self.cls.__mro__
+                    for name, param_type in getattr(mro, "__annotations__", {}).items()
+                }.values()
+            )
+        return self._fields
 
-    def get_fields_of_type(self, field_type: FieldType) -> list[Field]:
+    def get_fields_of_type(self, field_type: FieldType) -> list:
         return [f for f in self.fields if f.field_type == field_type]
 
     @property
     def params(self):
         params = "self"
-        if no_default_fields := [
+        no_default_fields = [
             f.param
             for f in self.fields
             if not _is_class_var(f.param_type) and not f.has_default
-        ]:
+        ]
+        if no_default_fields:
             params += ", " + ", ".join(no_default_fields)
-        if default_fields := [
+        default_fields = [
             f.param
             for f in self.fields
             if not _is_class_var(f.param_type) and f.has_default
-        ]:
+        ]
+        if default_fields:
             params += ", *, " + ", ".join(default_fields)
         return params
 
@@ -181,7 +203,8 @@ class Initializer:
     def body(self):
         body = "".join(f.body_setter for f in self.fields)
         if hasattr(self.cls, self.after_init_hook_name):
-            if initvars := self.get_fields_of_type(FieldType.INIT_VAR):
+            initvars = self.get_fields_of_type(FieldType.INIT_VAR)
+            if initvars:
                 init_params = ", ".join([f"{iv.name} = {iv.name}" for iv in initvars])
             else:
                 init_params = ""
@@ -195,7 +218,8 @@ class Initializer:
             print(code)
         try:
             globals = sys.modules[self.cls.__module__].__dict__
-            exec(code, globals, d := {})
+            d = {}
+            exec(code, globals, d)
             return d.popitem()[1]
         except (SyntaxError, NameError) as e:
             print(f"init failed in {self.cls}")
