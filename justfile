@@ -16,5 +16,5 @@ publish: build_doc test bump
 build_doc:
  python build_readme_examples.py
 
-bump:
- bump2version patch
+bump flags="":
+ python version_machine.py -L {{flags}}

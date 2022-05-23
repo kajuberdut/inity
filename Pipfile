@@ -11,7 +11,6 @@ incase = {editable = true, path = "."}
 flake8 = "*"
 black = "*"
 coverage = "*"
-bump2version = "*"
 
 [requires]
 python_version = "3.10"
