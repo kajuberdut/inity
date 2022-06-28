@@ -90,11 +90,7 @@ class Field:
         default = getattr(mro, name, default)
         if name != MISSING and isinstance(default, Field):
             self.metadata.update(default.metadata)
-            default = (
-                default.default
-                if default.default is not MISSING
-                else factory(default.default_factory)
-            )
+            default = default.default
 
         if callable(default) and self.factory_substring in default.__name__:
             default = default()
@@ -120,7 +116,10 @@ class Field:
             # Old versions of python do not have the __name__ attribute
             # on the types in typing.
             return "CLASS_VAR"
-        return self.param_type.__name__
+        try:
+            return self.param_type.__name__
+        except AttributeError:
+            return "UNKNOWN"
 
     @property
     def param(self):
